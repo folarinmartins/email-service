@@ -15,6 +15,7 @@
 	"dependencies": {
 		"dotenv": "^10.0.0",
 		"express": "^4.17.1",
+		"nodemailer": "^6.6.2",
 		"nunjucks": "^3.2.3",
 		"vash": "^0.13.0"
 	}
