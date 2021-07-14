@@ -1,56 +1,18 @@
 const express = require('express');
+const bodyParser = require('body-parser');
+require('dotenv').config();
 const path = require('path')
 const nunjucks = require('nunjucks');
-require('dotenv').config();
 const app = express();
+app.use(express.json())
 const routes = require('./routes')
-const nodemailer = require('nodemailer');
+const mailer = require('./src/mail')
 
-
-// const transporter = nodemailer.createTransport({
-// 	service: 'gmaili',
-// 	auth: {
-// 		user: 'youremail@gmail.com',
-// 		pass: 'yourpassword'
-// 	}
-// });
-
-const smtpTransporter = nodemailer.createTransport({
-	pool: true,
-	host: "mail.foodres.org",
-	port: 465,
-	secure: true, // use TLS
-	auth: {
-		user: process.env.MAIL_USER,
-		pass: process.env.MAIL_PASSWORD
-	}
-});
-
-// smtpTransporter.verify(function (error, success) {
-// 	if (error) {
-// 		console.log(error);
-// 	} else {
-// 		console.log("Server is ready to take our messages");
-// 	}
-// });
-
-
-const semdmail = (mailOptions) => {
-	smtpTransporter.sendMail(mailOptions, function (error, info) {
-		if (error) {
-			console.log(error);
-		} else {
-			console.log('Email sent: ' + info.response);
-		}
-	});
-}
-
-
-
+// mailer.verify();
 
 // app.configure(function () {
 app.set('port', process.env.PORT || 3000);
-app.set('views', __dirname + '/views/fullwidth');
+app.set('views', __dirname + '/src/views/compact');
 app.set('view engine', 'nunjucks');
 // app.use(express.favicon());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -58,31 +20,54 @@ app.use(express.static(path.join(__dirname, 'public')));
 // app.use(express.bodyParser());
 // app.use(express.methodOverride());
 // app.use(routes.index);
-app.get('/', async (req, res, next) => {
-	let data = {
-		message: 'Hello world!',
-		layout: 'layout.njk',
-		title: 'Nunjucks example'
-	}
 
-	res.render('index.njk', data, (err, html) => {
-		res.send(html);
-		var mailOptions = {
-			from: 'blockstale@blockstale.com',
-			to: 'folarinjmartins@gmail.com',
-			subject: 'Welcome - Central Mail Service',
-			text: 'That was easy!',
-			html,
-		};
-		// semdmail(mailOptions)
-	})
+// var urlencodedParser = bodyParser.urlencoded({ extended: false })
+
+app.get('/', async (req, res, next) => {
+	res.render('account_welcome.html');
+})
+app.post('/send', async (req, res, next) => {
+	if (req.body?.recipients.length > 0) {
+		switch (req.body.type) {
+			case 'account.welcome':
+				req.body.recipients.forEach(recipient => {
+					let data = {
+						name: recipient.name,
+						email: recipient.email,
+						title: 'Welcome to FoodRES, Inc',
+						company_email: 'foodres@foodres.org',
+						company_url: 'https://www.foodres.org',
+						company_name: 'FoodRES, Inc.',
+						from: 'FoodRES, Inc.'
+					}
+
+					res.render('account_welcome.html', data, (err, html) => {
+						var mailOptions = {
+							// from: data.from,
+							to: data.email,
+							subject: data.title,
+							text: 'That was easy!',
+							html,
+						};
+						mailer.sendMail(mailOptions)
+					})
+				})
+				break;
+
+			default:
+				break;
+		}
+		res.json({ status: 'success', message: "all mails sent" })
+	} else {
+		res.status(400).json({ status: 'error', message: "Bad request body", data: req.body })
+	}
 })
 
 app.get('/welcome', (req, res, next) => {
-	res.render('download_ready.html', {}, (err, html) => { res.send(html) })
+	res.render('account_welcome.html', {}, (err, html) => { res.send(html) })
 })
 
-nunjucks.configure('views/compact', {
+nunjucks.configure('src/views/compact', {
 	autoescape: true,
 	express: app,
 	noCache: true
