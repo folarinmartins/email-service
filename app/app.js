@@ -1,6 +1,6 @@
 const express = require('express');
-const bodyParser = require('body-parser');
 require('dotenv').config();
+const bodyParser = require('body-parser');
 const path = require('path')
 const nunjucks = require('nunjucks');
 const app = express();
@@ -8,6 +8,7 @@ app.use(express.json())
 const routes = require('./routes')
 const mailer = require('./src/mail')
 
+var nodemailer = require('nodemailer');
 // mailer.verify();
 
 // app.configure(function () {
@@ -27,6 +28,9 @@ app.get('/', async (req, res, next) => {
 	res.render('account_welcome.html');
 })
 app.post('/send', async (req, res, next) => {
+	if (!req.body.recipients)
+		res.status(400).send('recipients is required');
+
 	if (req.body?.recipients.length > 0) {
 		switch (req.body.type) {
 			case 'account.welcome':
@@ -37,27 +41,26 @@ app.post('/send', async (req, res, next) => {
 						title: 'Welcome to FoodRES, Inc',
 						company_email: 'foodres@foodres.org',
 						company_url: 'https://www.foodres.org',
-						company_name: 'FoodRES, Inc.',
-						from: 'FoodRES, Inc.'
+						company_name: 'FoodRES, Inc.'
 					}
-
 					res.render('account_welcome.html', data, (err, html) => {
-						var mailOptions = {
-							// from: data.from,
-							to: data.email,
-							subject: data.title,
-							text: 'That was easy!',
-							html,
-						};
-						mailer.sendMail(mailOptions)
+						if (!err) {
+							var mailOptions = {
+								from: 'FoodRES, LLC',
+								to: recipient.email,
+								subject: data.title,
+								text: '',
+								html
+							};
+							mailer.sendMail(mailOptions)
+						}
 					})
 				})
 				break;
-
 			default:
 				break;
 		}
-		res.json({ status: 'success', message: "all mails sent" })
+		res.json({ status: 'success', message: `All mails queued PID: ${process.env.POD_ID}` })
 	} else {
 		res.status(400).json({ status: 'error', message: "Bad request body", data: req.body })
 	}
@@ -72,17 +75,6 @@ nunjucks.configure('src/views/compact', {
 	express: app,
 	noCache: true
 });
-
-
-
-
-
-
-
-
-
-
-
 
 const server = app.listen(process.env.PORT, () => {
 	let host = server.address().address;

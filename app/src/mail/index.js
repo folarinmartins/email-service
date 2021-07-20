@@ -3,7 +3,7 @@ const nodemailer = require('nodemailer');
 
 
 const smtpTransporter = nodemailer.createTransport({
-	pool: true,
+	pool: false,
 	host: "mail.foodres.org",
 	port: 465,
 	secure: true, // use TLS
@@ -24,11 +24,13 @@ const verify = () => {
 }
 
 const sendMail = (mailOptions) => {
-	smtpTransporter.sendMail(mailOptions, function (error, info) {
+	smtpTransporter.sendMail({ ...mailOptions, from: process.env.MAIL_USER }, function (error, info) {
 		if (error) {
 			console.log(error);
 		} else {
-			console.log('Email sent: ', info);
+			// res.json({ message: 'Email sent: ' + info.response });
+			// console.log('Email sent: ', info);
+			return info;
 		}
 	});
 }
